@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  # Update ke v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5  # Update ke v5
       with:
         python-version: '3.9'
     
@@ -39,7 +39,7 @@ jobs:
         python src/predict.py
     
     - name: Upload model artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Update ke v4
       with:
         name: trained-model
         path: models/
@@ -49,13 +49,13 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  # Update ke v4
     
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3  # Update ke v3
     
     - name: Download model artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4  # Update ke v4
       with:
         name: trained-model
         path: models/
@@ -70,7 +70,7 @@ jobs:
     
     - name: Login to Docker Hub (optional)
       if: github.ref == 'refs/heads/main'
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3  # Update ke v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
@@ -87,10 +87,15 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  # Update ke v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5  # Tambahkan setup Python
+      with:
+        python-version: '3.9'
     
     - name: Download model artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4  # Update ke v4
       with:
         name: trained-model
         path: models/
