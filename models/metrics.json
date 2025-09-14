@@ -45,7 +45,7 @@
     }
   },
   "training_info": {
-    "timestamp": "2025-09-14T15:05:04.283061",
+    "timestamp": "2025-09-14T15:12:29.999158",
     "sklearn_version": "1.6.1",
     "python_version": "3.12.3",
     "status": "success"
