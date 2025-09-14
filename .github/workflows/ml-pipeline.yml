@@ -47,18 +47,54 @@ jobs:
         if [ -f "models/metrics.json" ]; then
           echo "✅ metrics.json found"
           
-          # Display formatted JSON
-          python -c "
-          import json
-          with open('models/metrics.json', 'r') as f:
-              metrics = json.load(f)
-          print('📊 Model Metrics Summary:')
-          print(f'   Model: {metrics.get(\"model_info\", {}).get(\"name\", \"Unknown\")}')
-          print(f'   Algorithm: {metrics.get(\"model_info\", {}).get(\"algorithm\", \"Unknown\")}')
-          print(f'   Accuracy: {metrics.get(\"performance\", {}).get(\"accuracy\", 0):.4f}')
-          print(f'   Classes: {len(metrics.get(\"dataset_info\", {}).get(\"classes\", []))}')
-          print(f'   Status: {metrics.get(\"training_info\", {}).get(\"status\", \"Unknown\")}')
-          "
+          # Create separate Python script for metrics display
+          cat > display_metrics.py << 'EOF'
+        import json
+        import sys
+        
+        try:
+            with open('models/metrics.json', 'r') as f:
+                metrics = json.load(f)
+            
+            print('📊 Model Metrics Summary:')
+            print('=' * 40)
+            
+            # Model info
+            if 'model_info' in metrics:
+                model_info = metrics['model_info']
+                print(f'Model: {model_info.get("name", "Unknown")}')
+                print(f'Algorithm: {model_info.get("algorithm", "Unknown")}')
+            
+            # Performance
+            if 'performance' in metrics:
+                perf = metrics['performance']
+                accuracy = perf.get('accuracy', 0)
+                print(f'Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)')
+            
+            # Dataset info
+            if 'dataset_info' in metrics:
+                dataset = metrics['dataset_info']
+                print(f'Dataset: {dataset.get("name", "unknown")}')
+                print(f'Classes: {dataset.get("n_classes", 0)}')
+                print(f'Features: {dataset.get("n_features", 0)}')
+                print(f'Test samples: {dataset.get("test_size", 0)}')
+            
+            # Training info
+            if 'training_info' in metrics:
+                training = metrics['training_info']
+                print(f'Status: {training.get("status", "unknown")}')
+                print(f'Timestamp: {training.get("timestamp", "unknown")}')
+            
+            print('✅ Metrics loaded successfully!')
+            
+        except Exception as e:
+            print(f'❌ Error loading metrics: {e}')
+            sys.exit(1)
+        EOF
+          
+          # Run the metrics display script
+          python display_metrics.py
+          
         else
           echo "❌ metrics.json not found!"
           exit 1
@@ -71,59 +107,66 @@ jobs:
     
     - name: Validate model performance from JSON
       run: |
-        python -c "
+        # Create validation script
+        cat > validate_model.py << 'EOF'
         import json
         import sys
         
-        # Load and validate metrics
-        with open('models/metrics.json', 'r') as f:
-            metrics = json.load(f)
-        
-        # Extract key information
-        status = metrics.get('training_info', {}).get('status', 'unknown')
-        accuracy = metrics.get('performance', {}).get('accuracy', 0)
-        model_name = metrics.get('model_info', {}).get('name', 'unknown')
-        timestamp = metrics.get('training_info', {}).get('timestamp', 'unknown')
-        
-        print('🎯 Model Validation Results:')
-        print('=' * 40)
-        print(f'Model Name: {model_name}')
-        print(f'Training Status: {status}')
-        print(f'Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)')
-        print(f'Trained At: {timestamp}')
-        
-        # Check if training was successful
-        if status != 'success':
-            print(f'❌ Training status indicates failure: {status}')
-            if 'error' in metrics.get('training_info', {}):
-                print(f'Error: {metrics[\"training_info\"][\"error\"]}')
+        try:
+            # Load metrics
+            with open('models/metrics.json', 'r') as f:
+                metrics = json.load(f)
+            
+            # Extract key information
+            status = metrics.get('training_info', {}).get('status', 'unknown')
+            accuracy = metrics.get('performance', {}).get('accuracy', 0)
+            model_name = metrics.get('model_info', {}).get('name', 'unknown')
+            
+            print('🎯 Model Validation Results:')
+            print('=' * 40)
+            print(f'Model Name: {model_name}')
+            print(f'Training Status: {status}')
+            print(f'Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)')
+            
+            # Check training status
+            if status != 'success':
+                print(f'❌ Training status indicates failure: {status}')
+                if 'error' in metrics.get('training_info', {}):
+                    print(f'Error: {metrics["training_info"]["error"]}')
+                sys.exit(1)
+            
+            # Check accuracy threshold
+            min_accuracy = 0.85
+            if accuracy < min_accuracy:
+                print(f'⚠️  WARNING: Accuracy {accuracy:.4f} below threshold {min_accuracy}')
+                print('Model performance may need improvement')
+                # Don't fail for demo, just warn
+            else:
+                print(f'✅ Accuracy {accuracy:.4f} meets requirements (>= {min_accuracy})')
+            
+            # Display feature importance if available
+            if 'performance' in metrics and 'feature_importance' in metrics['performance']:
+                print('\n📈 Feature Importance:')
+                importance = metrics['performance']['feature_importance']
+                sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+                for i, (feature, score) in enumerate(sorted_features, 1):
+                    print(f'  {i}. {feature}: {score:.4f}')
+            
+            print('\n✅ Model validation completed successfully!')
+            
+        except FileNotFoundError:
+            print('❌ metrics.json file not found!')
             sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f'❌ Error parsing JSON: {e}')
+            sys.exit(1)
+        except Exception as e:
+            print(f'❌ Validation error: {e}')
+            sys.exit(1)
+        EOF
         
-        # Check accuracy threshold
-        min_accuracy = 0.85
-        if accuracy < min_accuracy:
-            print(f'⚠️  WARNING: Accuracy {accuracy:.4f} below threshold {min_accuracy}')
-            print('This might indicate a training issue or data problem')
-            # Don't fail for demo purposes, just warn
-        else:
-            print(f'✅ Accuracy {accuracy:.4f} meets requirements (>= {min_accuracy})')
-        
-        # Display additional metrics if available
-        if 'dataset_info' in metrics:
-            dataset = metrics['dataset_info']
-            print(f'Dataset: {dataset.get(\"name\", \"unknown\")} ({dataset.get(\"n_samples\", 0)} samples)')
-            print(f'Features: {dataset.get(\"n_features\", 0)}')
-            print(f'Classes: {dataset.get(\"n_classes\", 0)}')
-        
-        if 'performance' in metrics and 'feature_importance' in metrics['performance']:
-            print('Top Features:')
-            importance = metrics['performance']['feature_importance']
-            sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
-            for feature, score in sorted_features[:2]:
-                print(f'  {feature}: {score:.4f}')
-        
-        print('✅ Model validation completed successfully!')
-        "
+        # Run validation
+        python validate_model.py
     
     - name: Upload comprehensive artifacts
       uses: actions/upload-artifact@v4
@@ -162,11 +205,14 @@ jobs:
         
         if [ -f "models/metrics.json" ]; then
           echo "✅ JSON metrics available for Docker"
+          
+          # Quick metrics check
           python -c "
-          import json
-          with open('models/metrics.json', 'r') as f:
-              metrics = json.load(f)
-          print(f'Docker build using model with {metrics.get(\"performance\", {}).get(\"accuracy\", 0):.4f} accuracy')
+        import json
+        with open('models/metrics.json', 'r') as f:
+            metrics = json.load(f)
+        accuracy = metrics.get('performance', {}).get('accuracy', 0)
+        print(f'Docker build using model with {accuracy:.4f} accuracy')
           "
         else
           echo "❌ JSON metrics missing!"
