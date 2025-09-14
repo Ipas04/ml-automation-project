@@ -1,0 +1,53 @@
+{
+  "model_info": {
+    "name": "iris_model",
+    "algorithm": "RandomForestClassifier",
+    "n_estimators": 100,
+    "random_state": 42
+  },
+  "dataset_info": {
+    "name": "iris",
+    "n_samples": 150,
+    "n_features": 4,
+    "n_classes": 3,
+    "classes": [
+      "setosa",
+      "versicolor",
+      "virginica"
+    ],
+    "test_size": 30
+  },
+  "performance": {
+    "accuracy": 0.9,
+    "accuracy_percentage": 90.0,
+    "confusion_matrix": [
+      [
+        10,
+        0,
+        0
+      ],
+      [
+        0,
+        9,
+        1
+      ],
+      [
+        0,
+        2,
+        8
+      ]
+    ],
+    "feature_importance": {
+      "sepal_length": 0.11634850540739942,
+      "sepal_width": 0.014999733101994138,
+      "petal_length": 0.43146640568097017,
+      "petal_width": 0.4371853558096363
+    }
+  },
+  "training_info": {
+    "timestamp": "2025-09-14T15:05:04.283061",
+    "sklearn_version": "1.6.1",
+    "python_version": "3.12.3",
+    "status": "success"
+  }
+}
